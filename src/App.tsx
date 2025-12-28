@@ -49,12 +49,12 @@ const DOMAIN_ICONS: Record<DomainCategory, typeof Database> = {
   'Mixed Reality': BracketsAngle,
 };
 
-const STATUS_CONFIG: Record<UpdateStatus, { color: string; icon: typeof CheckCircle; label: string }> = {
-  GA: { color: 'bg-green-500', icon: CheckCircle, label: 'Generally Available' },
-  Preview: { color: 'bg-blue-500', icon: Flask, label: 'Preview' },
-  Deprecated: { color: 'bg-orange-500', icon: Warning, label: 'Deprecated' },
-  Retired: { color: 'bg-red-500', icon: Archive, label: 'Retired' },
-  New: { color: 'bg-accent', icon: Sparkle, label: 'New' },
+const STATUS_CONFIG: Record<UpdateStatus, { color: string; bgColor: string; icon: typeof CheckCircle; label: string }> = {
+  GA: { color: 'bg-emerald-500', bgColor: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle, label: 'Generally Available' },
+  Preview: { color: 'bg-blue-500', bgColor: 'bg-blue-50 text-blue-700 border-blue-200', icon: Flask, label: 'Preview' },
+  Deprecated: { color: 'bg-amber-500', bgColor: 'bg-amber-50 text-amber-700 border-amber-200', icon: Warning, label: 'Deprecated' },
+  Retired: { color: 'bg-rose-500', bgColor: 'bg-rose-50 text-rose-700 border-rose-200', icon: Archive, label: 'Retired' },
+  New: { color: 'bg-purple-500', bgColor: 'bg-purple-50 text-purple-700 border-purple-200', icon: Sparkle, label: 'New' },
 };
 
 function App() {
@@ -109,11 +109,11 @@ function App() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
                   <CloudArrowUp weight="bold" className="text-white" size={24} />
                 </div>
                 <div>
-                  <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+                  <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
                     Azure Updates
                   </h1>
                   <p className="text-sm text-muted-foreground font-medium">
@@ -196,7 +196,7 @@ function App() {
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <Card className="p-6 mb-6 border-2">
+              <Card className="p-6 mb-6 border-2 bg-gradient-to-br from-white to-secondary/10 shadow-lg shadow-secondary/5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Funnel weight="bold" className="text-primary" />
@@ -225,7 +225,7 @@ function App() {
                         variant={isActive ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setSelectedDomain(isActive ? null : domain)}
-                        className="gap-2"
+                        className={`gap-2 transition-all ${isActive ? 'shadow-lg shadow-primary/30' : 'hover:border-primary/50'}`}
                       >
                         <Icon weight="bold" size={16} />
                         {domain}
@@ -296,10 +296,10 @@ function App() {
           <div className="space-y-8">
             {Object.entries(groupedByMonth).map(([month, monthUpdates]) => (
               <div key={month}>
-                <div className="sticky top-28 z-10 backdrop-blur-sm bg-background/80 py-2 mb-4">
+                <div className="sticky top-28 z-10 backdrop-blur-sm bg-gradient-to-r from-background/90 via-primary/10 to-background/90 py-2 mb-4 rounded-lg px-3">
                   <div className="flex items-center gap-3">
                     <CalendarBlank weight="bold" className="text-primary" size={20} />
-                    <h2 className="text-2xl font-bold tracking-tight">{month}</h2>
+                    <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{month}</h2>
                     <Separator className="flex-1" />
                     <span className="text-sm text-muted-foreground font-medium">
                       {monthUpdates.length} update{monthUpdates.length !== 1 ? 's' : ''}
@@ -348,15 +348,15 @@ function UpdateCard({ update, index, timeline = false }: { update: AzureUpdate; 
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
       <Card 
-        className={`group p-6 hover:shadow-lg hover:shadow-primary/10 transition-all duration-200 hover:-translate-y-1 border-2 hover:border-primary/30 cursor-pointer ${
+        className={`group p-6 hover:shadow-xl hover:shadow-primary/20 transition-all duration-200 hover:-translate-y-1 border-2 hover:border-primary/50 cursor-pointer bg-gradient-to-br from-white to-primary/5 ${
           timeline ? '' : 'h-full'
         } flex flex-col`}
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${statusConfig.color} ${update.status === 'New' ? 'animate-pulse' : ''}`} />
-            <Badge variant="secondary" className="gap-1.5 font-medium">
+            <div className={`w-2 h-2 rounded-full ${statusConfig.color} shadow-lg ${statusConfig.color.replace('bg-', 'shadow-')}/50 ${update.status === 'New' ? 'animate-pulse' : ''}`} />
+            <Badge className={`gap-1.5 font-medium border ${statusConfig.bgColor}`}>
               <StatusIcon weight="bold" size={14} />
               {statusConfig.label}
             </Badge>
@@ -378,10 +378,17 @@ function UpdateCard({ update, index, timeline = false }: { update: AzureUpdate; 
         </p>
 
         <div className="flex flex-wrap gap-2 pt-3 border-t border-border">
-          {update.domain.map((domain) => {
+          {update.domain.map((domain, idx) => {
             const Icon = DOMAIN_ICONS[domain];
+            const colors = [
+              'bg-violet-50 text-violet-700 border-violet-200',
+              'bg-cyan-50 text-cyan-700 border-cyan-200',
+              'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
+              'bg-indigo-50 text-indigo-700 border-indigo-200',
+              'bg-teal-50 text-teal-700 border-teal-200',
+            ];
             return (
-              <Badge key={domain} variant="outline" className="gap-1.5">
+              <Badge key={domain} className={`gap-1.5 border ${colors[idx % colors.length]}`}>
                 <Icon weight="bold" size={12} />
                 {domain}
               </Badge>
