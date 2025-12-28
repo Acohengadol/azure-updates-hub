@@ -24,13 +24,21 @@ import {
   CirclesThreePlus,
   Sparkle,
   Rocket,
-  TrendUp
+  TrendUp,
+  CaretDown
 } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AzureUpdate, DomainCategory, ViewMode, UpdateStatus } from '@/lib/types';
 
@@ -59,10 +67,28 @@ const STATUS_CONFIG: Record<UpdateStatus, { color: string; bgColor: string; icon
   New: { color: 'bg-purple-500', bgColor: 'bg-purple-50 text-purple-700 border-purple-200', icon: Sparkle, label: 'New' },
 };
 
+function getWeekRange(date: Date): { start: Date; end: Date; label: string } {
+  const day = date.getDay();
+  const diff = date.getDate() - day;
+  const start = new Date(date);
+  start.setDate(diff);
+  start.setHours(0, 0, 0, 0);
+  
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  
+  const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  return { start, end, label: `${startStr} - ${endStr}` };
+}
+
 function App() {
   const [updates] = useKV<AzureUpdate[]>('azure-updates', []);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<DomainCategory | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState<string>('all');
   const [viewMode, setViewMode] = useKV<ViewMode>('view-mode', 'grid');
   const [showFilters, setShowFilters] = useState(true);
 
@@ -74,6 +100,24 @@ function App() {
     return Array.from(domains).sort();
   }, [updates]);
 
+  const availableWeeks = useMemo(() => {
+    const weeks = new Map<string, { start: Date; end: Date; label: string }>();
+    
+    (updates || []).forEach(update => {
+      const date = new Date(update.date);
+      const week = getWeekRange(date);
+      const weekKey = week.start.toISOString();
+      
+      if (!weeks.has(weekKey)) {
+        weeks.set(weekKey, week);
+      }
+    });
+    
+    return Array.from(weeks.entries())
+      .sort((a, b) => b[1].start.getTime() - a[1].start.getTime())
+      .map(([key, week]) => ({ key, ...week }));
+  }, [updates]);
+
   const filteredUpdates = useMemo(() => {
     return (updates || []).filter(update => {
       const matchesSearch = searchQuery.trim() === '' || 
@@ -82,9 +126,18 @@ function App() {
       
       const matchesDomain = !selectedDomain || update.domain.includes(selectedDomain);
       
-      return matchesSearch && matchesDomain;
+      let matchesWeek = true;
+      if (selectedWeek !== 'all') {
+        const updateDate = new Date(update.date);
+        const selectedWeekData = availableWeeks.find(w => w.key === selectedWeek);
+        if (selectedWeekData) {
+          matchesWeek = updateDate >= selectedWeekData.start && updateDate <= selectedWeekData.end;
+        }
+      }
+      
+      return matchesSearch && matchesDomain && matchesWeek;
     });
-  }, [updates, searchQuery, selectedDomain]);
+  }, [updates, searchQuery, selectedDomain, selectedWeek, availableWeeks]);
 
   const groupedByMonth = useMemo(() => {
     const groups: Record<string, AzureUpdate[]> = {};
@@ -100,9 +153,10 @@ function App() {
   const handleClearFilters = () => {
     setSearchQuery('');
     setSelectedDomain(null);
+    setSelectedWeek('all');
   };
 
-  const hasActiveFilters = searchQuery.trim() !== '' || selectedDomain !== null;
+  const hasActiveFilters = searchQuery.trim() !== '' || selectedDomain !== null || selectedWeek !== 'all';
 
   const statistics = useMemo(() => {
     const total = (updates || []).length;
@@ -188,7 +242,7 @@ function App() {
                 <span className="hidden sm:inline">Filters</span>
                 {hasActiveFilters && (
                   <Badge variant="default" className="ml-1 px-1.5 min-w-5 h-5 flex items-center justify-center">
-                    {(searchQuery ? 1 : 0) + (selectedDomain ? 1 : 0)}
+                    {(searchQuery ? 1 : 0) + (selectedDomain ? 1 : 0) + (selectedWeek !== 'all' ? 1 : 0)}
                   </Badge>
                 )}
               </Button>
@@ -293,7 +347,7 @@ function App() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Funnel weight="bold" className="text-primary" />
-                    Filter by Domain
+                    Filters
                   </h3>
                   {hasActiveFilters && (
                     <Button
@@ -308,23 +362,53 @@ function App() {
                   )}
                 </div>
                 
-                <div className="flex flex-wrap gap-2">
-                  {allDomains.map((domain) => {
-                    const Icon = DOMAIN_ICONS[domain];
-                    const isActive = selectedDomain === domain;
-                    return (
-                      <Button
-                        key={domain}
-                        variant={isActive ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedDomain(isActive ? null : domain)}
-                        className={`gap-2 transition-all ${isActive ? 'shadow-lg shadow-primary/30' : 'hover:border-primary/50'}`}
-                      >
-                        <Icon weight="bold" size={16} />
-                        {domain}
-                      </Button>
-                    );
-                  })}
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <CalendarBlank weight="bold" className="text-secondary" size={18} />
+                      <h4 className="text-sm font-semibold text-foreground">Filter by Week</h4>
+                    </div>
+                    <Select value={selectedWeek} onValueChange={setSelectedWeek}>
+                      <SelectTrigger className="w-full h-11 bg-white border-2">
+                        <SelectValue placeholder="All weeks" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All weeks</SelectItem>
+                        {availableWeeks.map((week) => (
+                          <SelectItem key={week.key} value={week.key}>
+                            {week.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <SquaresFour weight="bold" className="text-accent" size={18} />
+                      <h4 className="text-sm font-semibold text-foreground">Filter by Domain</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {allDomains.map((domain) => {
+                        const Icon = DOMAIN_ICONS[domain];
+                        const isActive = selectedDomain === domain;
+                        return (
+                          <Button
+                            key={domain}
+                            variant={isActive ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSelectedDomain(isActive ? null : domain)}
+                            className={`gap-2 transition-all ${isActive ? 'shadow-lg shadow-primary/30' : 'hover:border-primary/50'}`}
+                          >
+                            <Icon weight="bold" size={16} />
+                            {domain}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </Card>
             </motion.div>
@@ -332,10 +416,17 @@ function App() {
         </AnimatePresence>
 
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground font-medium">
-            Showing <span className="text-foreground font-semibold">{filteredUpdates.length}</span> update{filteredUpdates.length !== 1 ? 's' : ''}
-            {selectedDomain && <span> in <span className="text-primary font-semibold">{selectedDomain}</span></span>}
-          </p>
+          <div className="text-sm text-muted-foreground font-medium">
+            <p>
+              Showing <span className="text-foreground font-semibold">{filteredUpdates.length}</span> update{filteredUpdates.length !== 1 ? 's' : ''}
+              {selectedDomain && <span> in <span className="text-primary font-semibold">{selectedDomain}</span></span>}
+              {selectedWeek !== 'all' && (
+                <span> for <span className="text-secondary font-semibold">
+                  {availableWeeks.find(w => w.key === selectedWeek)?.label}
+                </span></span>
+              )}
+            </p>
+          </div>
           
           <div className="flex sm:hidden items-center gap-2">
             <Button
