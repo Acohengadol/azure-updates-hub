@@ -22,7 +22,9 @@ import {
   BracketsAngle,
   Toolbox,
   CirclesThreePlus,
-  Sparkle
+  Sparkle,
+  Rocket,
+  TrendUp
 } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -101,6 +103,15 @@ function App() {
   };
 
   const hasActiveFilters = searchQuery.trim() !== '' || selectedDomain !== null;
+
+  const statistics = useMemo(() => {
+    const total = (updates || []).length;
+    const launched = (updates || []).filter(u => u.status === 'GA').length;
+    const preview = (updates || []).filter(u => u.status === 'Preview').length;
+    const inDevelopment = (updates || []).filter(u => u.status === 'New').length;
+    
+    return { total, launched, preview, inDevelopment };
+  }, [updates]);
 
   return (
     <div className="min-h-screen mesh-background grid-pattern">
@@ -187,6 +198,88 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0 }}
+          >
+            <Card className="p-6 border-2 bg-gradient-to-br from-white to-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
+                  <TrendUp weight="bold" className="text-white" size={24} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Total Updates</p>
+                <p className="text-4xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                  {statistics.total}
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <Card className="p-6 border-2 border-emerald-200 bg-gradient-to-br from-white to-emerald-50 hover:shadow-xl hover:shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                  <CheckCircle weight="bold" className="text-white" size={24} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-emerald-700 uppercase tracking-wide">Launched</p>
+                <p className="text-4xl font-bold text-emerald-600">
+                  {statistics.launched}
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <Card className="p-6 border-2 border-blue-200 bg-gradient-to-br from-white to-blue-50 hover:shadow-xl hover:shadow-blue-500/20 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                  <Flask weight="bold" className="text-white" size={24} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-700 uppercase tracking-wide">In Preview</p>
+                <p className="text-4xl font-bold text-blue-600">
+                  {statistics.preview}
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
+            <Card className="p-6 border-2 border-purple-200 bg-gradient-to-br from-white to-purple-50 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                  <Rocket weight="bold" className="text-white" size={24} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-purple-700 uppercase tracking-wide">In Development</p>
+                <p className="text-4xl font-bold text-purple-600">
+                  {statistics.inDevelopment}
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
         <AnimatePresence>
           {showFilters && (
             <motion.div
